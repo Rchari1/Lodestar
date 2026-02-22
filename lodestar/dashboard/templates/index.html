@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lodestar Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header>
+        <h1>Lodestar</h1>
+        <span id="status-badge" class="badge">Loading...</span>
+    </header>
+
+    <main>
+        <!-- Summary cards -->
+        <section class="cards">
+            <div class="card">
+                <h3>Total Equity</h3>
+                <p id="equity" class="big-number">
+                    {% if snapshot %}${{ "%.2f"|format(snapshot.total_equity) }}{% else %}--{% endif %}
+                </p>
+            </div>
+            <div class="card">
+                <h3>Cash</h3>
+                <p id="cash" class="big-number">
+                    {% if snapshot %}${{ "%.2f"|format(snapshot.cash) }}{% else %}--{% endif %}
+                </p>
+            </div>
+            <div class="card">
+                <h3>Positions</h3>
+                <p id="num-positions" class="big-number">
+                    {% if snapshot %}{{ snapshot.positions|length }}{% else %}0{% endif %}
+                </p>
+            </div>
+            <div class="card">
+                <h3>Mode</h3>
+                <p class="big-number mode-{{ settings.trading.mode }}">
+                    {{ settings.trading.mode|upper }}
+                </p>
+            </div>
+        </section>
+
+        <!-- Positions table -->
+        <section>
+            <h2>Open Positions</h2>
+            <table id="positions-table">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Qty</th>
+                        <th>Avg Cost</th>
+                        <th>Current</th>
+                        <th>Value</th>
+                        <th>P&amp;L</th>
+                        <th>P&amp;L %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% if snapshot %}
+                {% for p in snapshot.positions %}
+                    <tr>
+                        <td><strong>{{ p.symbol }}</strong></td>
+                        <td>{{ "%.4f"|format(p.quantity) }}</td>
+                        <td>${{ "%.2f"|format(p.average_cost) }}</td>
+                        <td>${{ "%.2f"|format(p.current_price) }}</td>
+                        <td>${{ "%.2f"|format(p.market_value) }}</td>
+                        <td class="{% if p.unrealized_pnl >= 0 %}positive{% else %}negative{% endif %}">
+                            ${{ "%+.2f"|format(p.unrealized_pnl) }}
+                        </td>
+                        <td class="{% if p.unrealized_pnl_pct >= 0 %}positive{% else %}negative{% endif %}">
+                            {{ "%+.2f"|format(p.unrealized_pnl_pct * 100) }}%
+                        </td>
+                    </tr>
+                {% endfor %}
+                {% endif %}
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Recent signals -->
+        <section>
+            <h2>Recent Signals</h2>
+            <table id="signals-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Symbol</th>
+                        <th>Strategy</th>
+                        <th>Side</th>
+                        <th>Strength</th>
+                        <th>Confidence</th>
+                        <th>Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for s in signals|reverse %}
+                    <tr>
+                        <td>{{ s.timestamp.strftime('%H:%M:%S') }}</td>
+                        <td><strong>{{ s.symbol }}</strong></td>
+                        <td>{{ s.strategy }}</td>
+                        <td class="{% if s.side.value == 'buy' %}positive{% else %}negative{% endif %}">
+                            {{ s.side.value|upper }}
+                        </td>
+                        <td>{{ s.strength.value }}</td>
+                        <td>{{ "%.0f"|format(s.confidence * 100) }}%</td>
+                        <td>{{ s.reason }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Recent trades -->
+        <section>
+            <h2>Recent Trades</h2>
+            <table id="trades-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Symbol</th>
+                        <th>Side</th>
+                        <th>Qty</th>
+                        <th>Price</th>
+                        <th>Status</th>
+                        <th>Strategy</th>
+                        <th>Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for t in trades|reverse %}
+                    <tr>
+                        <td>{{ t.timestamp.strftime('%H:%M:%S') }}</td>
+                        <td><strong>{{ t.symbol }}</strong></td>
+                        <td class="{% if t.side.value == 'buy' %}positive{% else %}negative{% endif %}">
+                            {{ t.side.value|upper }}
+                        </td>
+                        <td>{{ "%.4f"|format(t.quantity) }}</td>
+                        <td>${{ "%.2f"|format(t.price) }}</td>
+                        <td>{{ t.status }}</td>
+                        <td>{{ t.strategy }}</td>
+                        <td>{{ t.reason }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </section>
+    </main>
+
+    <script>
+        // Auto-refresh dashboard every 30 seconds
+        async function refresh() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                const badge = document.getElementById('status-badge');
+                badge.textContent = data.status.toUpperCase();
+                badge.className = 'badge badge-' + data.status;
+
+                document.getElementById('equity').textContent = '$' + data.equity.toLocaleString(undefined, {minimumFractionDigits: 2});
+                document.getElementById('cash').textContent = '$' + data.cash.toLocaleString(undefined, {minimumFractionDigits: 2});
+                document.getElementById('num-positions').textContent = data.positions;
+            } catch (e) {
+                console.error('Refresh failed:', e);
+            }
+        }
+
+        setInterval(refresh, 30000);
+        refresh();
+    </script>
+</body>
+</html>
