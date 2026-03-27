@@ -153,10 +153,6 @@ STRATEGY_REGISTRY["my_strategy"] = MyStrategy
 | `GET /api/snapshots` | Equity snapshots over time |
 
 
-```bash
-pytest tests/ -v
-```
-
 ## License
 
 Boost Software License 1.0 — see [LICENSE](LICENSE).
