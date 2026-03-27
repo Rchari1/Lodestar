@@ -19,7 +19,7 @@ Automated trading application that connects to Robinhood, performs market resear
 - **Risk Controls** — Position sizing, daily trade limits, stop-loss, take-profit
 - **Web Dashboard** — Real-time portfolio view, trade log, signal history (FastAPI)
 - **CLI** — Full-featured command-line interface with Rich formatting
-
+- 
 ## Project Structure
 
 ```
@@ -152,7 +152,6 @@ STRATEGY_REGISTRY["my_strategy"] = MyStrategy
 | `GET /api/signals` | Recent signal log |
 | `GET /api/snapshots` | Equity snapshots over time |
 
-## Tests
 
 ```bash
 pytest tests/ -v
