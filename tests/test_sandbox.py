@@ -47,3 +47,45 @@ def test_requires_weights_function():
 
 def test_syntax_error_is_reported():
     assert any("syntax" in p.lower() for p in scan("def weights(:\n"))
+
+
+from lodestar.harness.sandbox import StrategyError, run_strategy  # noqa: E402
+
+
+def _write(tmp_path, body):
+    p = tmp_path / "strategy.py"
+    p.write_text(textwrap.dedent(body))
+    return p
+
+
+def test_runs_full_and_truncated(tmp_path, bars):
+    p = _write(tmp_path, GOOD)
+    cutoffs = [bars.index[400], bars.index[900]]
+    full, cuts = run_strategy(p, bars, cutoffs, timeout=60)
+    assert full.shape == bars.close.shape
+    assert set(cuts) == set(cutoffs)
+    assert cuts[cutoffs[0]].index[-1] == cutoffs[0]
+
+
+def test_exception_becomes_strategy_error(tmp_path, bars):
+    p = _write(tmp_path, "def weights(bars):\n    raise ValueError('boom')\n")
+    with pytest.raises(StrategyError, match="boom"):
+        run_strategy(p, bars)
+
+
+def test_infinite_loop_is_killed(tmp_path, bars):
+    p = _write(tmp_path, "def weights(bars):\n    while True:\n        pass\n")
+    with pytest.raises(StrategyError, match="timed out"):
+        run_strategy(p, bars, timeout=3)
+
+
+def test_non_dataframe_is_rejected(tmp_path, bars):
+    p = _write(tmp_path, "def weights(bars):\n    return 1.0\n")
+    with pytest.raises(StrategyError, match="DataFrame"):
+        run_strategy(p, bars)
+
+
+def test_scan_failure_is_raised_before_running(tmp_path, bars):
+    p = _write(tmp_path, "import os\ndef weights(bars):\n    return bars.close * 0\n")
+    with pytest.raises(StrategyError, match="not allowed"):
+        run_strategy(p, bars)
