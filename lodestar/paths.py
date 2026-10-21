@@ -1,6 +1,7 @@
 """Where everything lives. Every function takes a Paths so tests can use a temp dir."""
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -61,4 +62,6 @@ class Paths:
         return self.root / "paper" / "ledger"
 
 
-DEFAULT = Paths.at(Path(__file__).resolve().parents[1])
+REPO_ROOT = Path(__file__).resolve().parents[1]
+# LODESTAR_ROOT points the CLI at another workspace (used by the end-to-end tests).
+DEFAULT = Paths.at(os.environ.get("LODESTAR_ROOT") or REPO_ROOT)

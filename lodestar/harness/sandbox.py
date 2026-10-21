@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import ast
 import multiprocessing as mp
+import time
 import traceback
 from pathlib import Path
 
@@ -93,6 +94,16 @@ def _child(source: str, filename: str, bars, cutoffs, conn) -> None:
         conn.close()
 
 
+def _wait_for_result(conn, proc, timeout: float) -> None:
+    """Block until the child sends a result. Fail fast if it dies, fail at the timeout if it hangs."""
+    deadline = time.monotonic() + timeout
+    while not conn.poll(0.1):
+        if not proc.is_alive() and not conn.poll(0):
+            raise StrategyError(f"strategy process exited (code {proc.exitcode}) without a result")
+        if time.monotonic() > deadline:
+            raise StrategyError(f"strategy timed out after {timeout:g}s")
+
+
 def run_strategy(path, bars, cutoffs=(), timeout: float = TIMEOUT_S):
     """Run `weights(bars)` (plus one run per truncation cutoff) in a child process.
 
@@ -109,8 +120,7 @@ def run_strategy(path, bars, cutoffs=(), timeout: float = TIMEOUT_S):
     proc.start()
     child.close()
     try:
-        if not parent.poll(timeout):
-            raise StrategyError(f"strategy timed out after {timeout:g}s")
+        _wait_for_result(parent, proc, timeout)
         status, full, cuts = parent.recv()
     except EOFError:
         raise StrategyError("strategy process died without a result") from None
