@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Edit(./research/strategy.py)",
+      "Edit(./research/notes.md)",
+      "Bash(.venv/bin/python -m lodestar evaluate *)",
+      "Bash(.venv/bin/python -m lodestar board*)",
+      "Bash(tail -n * research/results.jsonl)"
+    ],
+    "deny": [
+      "Read(./data/holdout/**)",
+      "Read(./.env)",
+      "Edit(./lodestar/**)",
+      "Edit(./tests/**)",
+      "Edit(./scripts/**)",
+      "Edit(./data/**)",
+      "Edit(./research/found/**)",
+      "Edit(./research/attempts/**)",
+      "Edit(./research/results.jsonl)",
+      "Edit(./research/promoted.json)",
+      "Edit(./research/program.md)",
+      "Bash(.venv/bin/python -m lodestar promote*)",
+      "Bash(.venv/bin/python -m lodestar paper*)",
+      "Bash(.venv/bin/python -m lodestar rehash*)",
+      "Bash(.venv/bin/python -m lodestar fetch*)"
+    ]
+  }
+}
