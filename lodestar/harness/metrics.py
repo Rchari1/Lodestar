@@ -37,3 +37,31 @@ def annual_turnover(w: pd.DataFrame) -> float:
     daily = w.diff().abs().sum(axis=1)
     daily.iloc[0] = 0.0
     return float(daily.mean() * DAYS)
+
+
+EULER_GAMMA = 0.5772156649015329
+
+
+def deflated_sharpe(r: pd.Series, trial_daily_sharpes) -> float:
+    """Deflated Sharpe ratio (Bailey & Lopez de Prado, 2014).
+
+    The probability that the true Sharpe exceeds the best Sharpe you'd expect by luck
+    after `len(trial_daily_sharpes)` tries. Sharpes are per-period (daily), not annualized.
+    With fewer than two trials the benchmark is 0, which gives the probabilistic Sharpe.
+    """
+    z = NormalDist()
+    sr = daily_sharpe(r)
+    trials = np.asarray(list(trial_daily_sharpes), dtype=float)
+    n = len(trials)
+    if n >= 2:
+        sd = math.sqrt(float(np.var(trials, ddof=1)))
+        sr0 = sd * ((1 - EULER_GAMMA) * z.inv_cdf(1 - 1 / n)
+                    + EULER_GAMMA * z.inv_cdf(1 - 1 / (n * math.e)))
+    else:
+        sr0 = 0.0
+    g3 = float(r.skew())
+    g4 = float(r.kurt()) + 3.0
+    denom = 1 - g3 * sr + (g4 - 1) / 4 * sr ** 2
+    if denom <= 0 or len(r) < 2:
+        return 0.0
+    return z.cdf((sr - sr0) * math.sqrt(len(r) - 1) / math.sqrt(denom))
