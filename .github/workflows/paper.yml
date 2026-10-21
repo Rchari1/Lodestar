@@ -1,0 +1,48 @@
+name: paper
+
+# Weekdays at 12:30 UTC: before the US open in both EST and EDT, so market-on-open
+# orders match the backtest's next-open execution. The ledger commit is the track record.
+on:
+  schedule:
+    - cron: "30 12 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Plan orders without sending them"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: paper
+  cancel-in-progress: false
+
+jobs:
+  rebalance:
+    runs-on: ubuntu-latest
+    env:
+      ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+      ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+    steps:
+      - name: Require Alpaca paper keys
+        if: env.ALPACA_API_KEY == '' || env.ALPACA_SECRET_KEY == ''
+        run: |
+          echo "::warning::Set ALPACA_API_KEY and ALPACA_SECRET_KEY repo secrets to enable paper trading."
+          exit 1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - name: Rebalance
+        run: python -m lodestar paper ${{ inputs.dry_run && '--dry-run' || '' }}
+      - name: Commit ledger
+        run: |
+          git config user.name "lodestar-bot"
+          git config user.email "lodestar-bot@users.noreply.github.com"
+          git add paper/ledger
+          git diff --cached --quiet && exit 0
+          git commit -m "paper: ledger $(date -u +%F)"
+          git push
