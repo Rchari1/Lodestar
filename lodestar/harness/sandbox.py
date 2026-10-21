@@ -27,7 +27,8 @@ FORBIDDEN_ATTRS = {
     "to_feather", "to_stata", "to_orc", "to_html", "to_latex", "to_markdown", "to_xml",
     "to_clipboard", "tofile", "fromfile", "load", "save", "savez", "savez_compressed",
     "loadtxt", "savetxt", "genfromtxt", "memmap", "io", "lib", "ctypeslib", "testing",
-    "f2py", "distutils",
+    "f2py", "distutils", "to_string", "fromregex", "DataSource", "HDFStore", "ExcelFile",
+    "ExcelWriter", "api",
 }
 
 

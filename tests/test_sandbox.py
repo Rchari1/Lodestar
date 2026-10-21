@@ -35,6 +35,11 @@ def test_accepts_plain_numpy_pandas_strategy():
     "eval('1')",
     "f = getattr(pd, 'read_csv')",
     "__import__('os')",
+    "s = pd.HDFStore('data/holdout/bars.h5')",
+    "x = pd.ExcelFile('x.xlsx')",
+    "bars.close.to_string(buf='leak.txt')",
+    "x = np.fromregex('f', 'r', float)",
+    "x = np.DataSource()",
 ])
 def test_rejects_io_and_escape_hatches(snippet):
     assert scan(GOOD + "\n" + snippet + "\n"), snippet
