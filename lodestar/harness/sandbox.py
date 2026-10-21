@@ -7,6 +7,9 @@ in a child process that only ever receives research data.
 from __future__ import annotations
 
 import ast
+import multiprocessing as mp
+import traceback
+from pathlib import Path
 
 import pandas as pd
 
@@ -31,6 +34,11 @@ class StrategyError(Exception):
     """The strategy failed to scan, run, or return valid weights."""
 
 
+def _module_allowed(name: str) -> bool:
+    root, *rest = name.split(".")
+    return root in ALLOWED_IMPORTS and not set(rest) & FORBIDDEN_ATTRS
+
+
 def scan(source: str) -> list[str]:
     try:
         tree = ast.parse(source)
@@ -44,13 +52,11 @@ def scan(source: str) -> list[str]:
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
-                if alias.name.split(".")[0] not in ALLOWED_IMPORTS or alias.name.count(".") and \
-                        set(alias.name.split(".")[1:]) & FORBIDDEN_ATTRS:
+                if not _module_allowed(alias.name):
                     bad(node, f"import of '{alias.name}' is not allowed")
         elif isinstance(node, ast.ImportFrom):
             mod = node.module or ""
-            if node.level or mod.split(".")[0] not in ALLOWED_IMPORTS or \
-                    set(mod.split(".")[1:]) & FORBIDDEN_ATTRS:
+            if node.level or not _module_allowed(mod):
                 bad(node, f"import from '{mod}' is not allowed")
             for alias in node.names:
                 if alias.name in FORBIDDEN_ATTRS or alias.name in FORBIDDEN_NAMES:
@@ -69,10 +75,6 @@ def scan(source: str) -> list[str]:
 
 
 # --- running ------------------------------------------------------------------
-
-import multiprocessing as mp  # noqa: E402
-import traceback  # noqa: E402
-from pathlib import Path  # noqa: E402
 
 TIMEOUT_S = 60
 
