@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from lodestar.paths import DEFAULT, Paths
+from lodestar.paths import DEFAULT, REPO_ROOT, Paths
 
 
 def test_layout_is_relative_to_root(tmp_path):
@@ -19,4 +19,4 @@ def test_layout_is_relative_to_root(tmp_path):
 
 def test_default_root_is_repo():
     assert (DEFAULT.root / "pyproject.toml").exists()
-    assert DEFAULT.root == Path(__file__).resolve().parents[1]
+    assert REPO_ROOT == Path(__file__).resolve().parents[1]
