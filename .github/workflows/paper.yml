@@ -26,19 +26,28 @@ jobs:
       ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
       ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
     steps:
-      - name: Require Alpaca paper keys
-        if: env.ALPACA_API_KEY == '' || env.ALPACA_SECRET_KEY == ''
+      - name: Check for Alpaca paper keys
+        id: keys
         run: |
-          echo "::warning::Set ALPACA_API_KEY and ALPACA_SECRET_KEY repo secrets to enable paper trading."
-          exit 1
+          if [ -z "$ALPACA_API_KEY" ] || [ -z "$ALPACA_SECRET_KEY" ]; then
+            echo "::warning::Set ALPACA_API_KEY and ALPACA_SECRET_KEY repo secrets to enable paper trading."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/checkout@v4
+        if: steps.keys.outputs.enabled == 'true'
       - uses: actions/setup-python@v5
+        if: steps.keys.outputs.enabled == 'true'
         with:
           python-version: "3.12"
       - run: pip install -e .
+        if: steps.keys.outputs.enabled == 'true'
       - name: Rebalance
+        if: steps.keys.outputs.enabled == 'true'
         run: python -m lodestar paper ${{ inputs.dry_run && '--dry-run' || '' }}
       - name: Commit ledger
+        if: steps.keys.outputs.enabled == 'true'
         run: |
           git config user.name "lodestar-bot"
           git config user.email "lodestar-bot@users.noreply.github.com"
