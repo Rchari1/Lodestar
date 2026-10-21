@@ -1,6 +1,7 @@
 """Daily bars as wide frames (date x symbol), stored on disk as long-format Parquet."""
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar
@@ -81,3 +82,28 @@ def save_bars(bars: Bars, path: str | Path) -> None:
 
 def load_bars(path: str | Path) -> Bars:
     return Bars.from_long(pd.read_parquet(path))
+
+
+# --- research / holdout split -------------------------------------------------
+# The holdout start is written once, on the first fetch, and never moves. If it
+# rolled forward with each fetch, data that had been holdout would leak into research.
+
+HOLDOUT_MONTHS = 18
+
+
+def freeze_split(paths, last_date, months: int = HOLDOUT_MONTHS) -> pd.Timestamp:
+    if paths.split_json.exists():
+        return read_split(paths)
+    start = (pd.Timestamp(last_date) - pd.DateOffset(months=months)).normalize()
+    paths.split_json.parent.mkdir(parents=True, exist_ok=True)
+    paths.split_json.write_text(json.dumps(
+        {"holdout_start": start.strftime("%Y-%m-%d"), "months": months}, indent=2) + "\n")
+    return start
+
+
+def read_split(paths) -> pd.Timestamp:
+    return pd.Timestamp(json.loads(paths.split_json.read_text())["holdout_start"])
+
+
+def split_bars(bars: Bars, holdout_start) -> tuple[Bars, Bars]:
+    return bars.between(end=holdout_start), bars.between(start=holdout_start)
