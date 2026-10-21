@@ -19,8 +19,12 @@ mkdir -p logs
 
 for i in $(seq 1 "$N"); do
   stamp=$(date +%Y%m%d-%H%M%S)
-  before=$(wc -l < research/results.jsonl 2>/dev/null || echo 0)
+  before=0
+  [ -f research/results.jsonl ] && before=$(wc -l < research/results.jsonl | tr -d ' ')
   echo "== session $i/$N  $stamp"
+
+  # Hard cap on evaluations per session, enforced by `lodestar evaluate`.
+  export LODESTAR_SESSION_START="$before" LODESTAR_MAX_EVALS="${LODESTAR_MAX_EVALS:-3}"
 
   # --strict-mcp-config: no MCP servers at all (in particular, no brokerage connectors).
   # --setting-sources project + --settings: ignore user hooks and plugins; use the agent policy.
