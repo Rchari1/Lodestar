@@ -111,8 +111,8 @@ the full run to within 1e-9. Any mismatch rejects the attempt.
   `research/strategy.py` and `research/notes.md` only, and
   `Bash(.venv/bin/python -m lodestar evaluate:*)`
 - `--permission-mode dontAsk`, so everything else is denied without a prompt
-- `.claude/settings.json` deny rules for `data/holdout/**`, `lodestar/**` edits,
-  `.env`, and the `promote` and `paper` commands
+- `scripts/agent-settings.json` (loop-only, so humans can still edit the harness) denies `data/holdout/**`, `lodestar/**` edits,
+  `.env`, and the `promote`, `paper`, `fetch` and `rehash` commands; `--strict-mcp-config` loads no MCP servers
 
 `harness/MANIFEST.sha256` lists hashes of `lodestar/**/*.py`. `evaluate`
 refuses to run if any hash differs, and a test keeps the manifest current.
