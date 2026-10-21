@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 
 from lodestar.data.store import Bars
-from lodestar.harness.backtest import normalize
+from lodestar.harness.backtest import backtest, forward_open_returns, normalize
 
 
 def _w(bars, value=0.0):
@@ -51,3 +51,37 @@ def test_reindexes_and_drops_unknown_columns(bars):
 def test_rejects_non_dataframe(bars):
     with pytest.raises(TypeError):
         normalize(np.zeros((3, 3)), bars)
+
+
+def _tiny_bars():
+    idx = pd.bdate_range("2020-01-01", periods=5)
+    opens = pd.DataFrame({"A": [100.0, 110.0, 121.0, 121.0, 133.1]}, index=idx)
+    return Bars(opens, opens, opens, opens, opens * 0 + 1e6)
+
+
+def test_forward_returns_are_next_open_to_open_after():
+    b = _tiny_bars()
+    fwd = forward_open_returns(b)
+    # decision on day 0 -> enter at open[1]=110, exit at open[2]=121
+    assert fwd["A"].iloc[0] == pytest.approx(0.10)
+    assert fwd["A"].iloc[1] == pytest.approx(0.0)
+    assert np.isnan(fwd["A"].iloc[-1])
+
+
+def test_backtest_timing_and_costs():
+    b = _tiny_bars()
+    w = pd.DataFrame({"A": [1.0, 1.0, 0.0, 0.0, 0.0]}, index=b.index)
+    r = backtest(w, b, cost_bps=5.0)
+    assert len(r) == 3  # last two decision days have no realised return
+    assert r.iloc[0] == pytest.approx(0.10 - 0.0005)  # buy 0 -> 1 costs 5 bps
+    assert r.iloc[1] == pytest.approx(0.0)            # hold through a flat day
+    assert r.iloc[2] == pytest.approx(-0.0005)        # sell 1 -> 0 costs 5 bps
+
+
+def test_zero_cost_buy_and_hold_matches_price_path(bars):
+    w = pd.DataFrame(0.0, index=bars.index, columns=bars.symbols)
+    w["AAA"] = 1.0
+    r = backtest(w, bars, cost_bps=0.0)
+    growth = (1 + r).prod()
+    expected = bars.open["AAA"].iloc[-1] / bars.open["AAA"].iloc[1]
+    assert growth == pytest.approx(expected)

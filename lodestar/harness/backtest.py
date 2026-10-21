@@ -24,3 +24,18 @@ def normalize(w, bars: Bars, max_gross: float = MAX_GROSS) -> pd.DataFrame:
     gross = w.abs().sum(axis=1)
     scale = (max_gross / gross).where(gross > max_gross, 1.0)
     return w.mul(scale, axis=0)
+
+
+def forward_open_returns(bars: Bars) -> pd.DataFrame:
+    """Return earned by a position decided at t: open[t+2] / open[t+1] - 1."""
+    return bars.open.shift(-2) / bars.open.shift(-1) - 1.0
+
+
+def backtest(w, bars: Bars, cost_bps: float = COST_BPS) -> pd.Series:
+    w = normalize(w, bars)
+    fwd = forward_open_returns(bars).fillna(0.0)
+    gross = (w * fwd).sum(axis=1)
+    turnover = w.diff().abs().sum(axis=1)
+    turnover.iloc[0] = w.iloc[0].abs().sum()
+    net = gross - turnover * cost_bps / 1e4
+    return net.iloc[:-2].rename("ret")
