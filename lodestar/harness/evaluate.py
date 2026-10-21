@@ -44,6 +44,18 @@ def read_results(paths) -> list[dict]:
     return [json.loads(line) for line in paths.results.read_text().splitlines() if line.strip()]
 
 
+def session_budget_error(paths, environ) -> str | None:
+    """Enforce the per-session evaluation cap set by scripts/loop.sh (unset means no cap)."""
+    start, cap = environ.get("LODESTAR_SESSION_START"), environ.get("LODESTAR_MAX_EVALS")
+    if start is None or cap is None:
+        return None
+    used = len(read_results(paths)) - int(start)
+    if used >= int(cap):
+        return (f"session evaluation limit reached ({used}/{cap}). "
+                "Write your notes.md entry and end the session.")
+    return None
+
+
 def _append(paths, record: dict) -> None:
     paths.results.parent.mkdir(parents=True, exist_ok=True)
     with paths.results.open("a") as f:

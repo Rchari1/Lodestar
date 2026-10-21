@@ -35,7 +35,13 @@ def cmd_fetch(args) -> int:
 
 
 def cmd_evaluate(args) -> int:
-    from lodestar.harness.evaluate import IntegrityError, evaluate
+    import os
+
+    from lodestar.harness.evaluate import IntegrityError, evaluate, session_budget_error
+    over = session_budget_error(DEFAULT, os.environ)
+    if over:
+        print(f"REFUSED: {over}", file=sys.stderr)
+        return 3
     try:
         rec = evaluate(DEFAULT, args.name, args.hypothesis)
     except IntegrityError as e:

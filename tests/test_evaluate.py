@@ -112,3 +112,22 @@ def test_integrity_failure_refuses_to_score(paths, tmp_path):
     with pytest.raises(IntegrityError):
         evaluate(paths, "x", "h", pkg_dir=pkg)
     assert not paths.results.exists()
+
+
+from lodestar.harness.evaluate import session_budget_error  # noqa: E402
+
+
+def test_session_budget_unlimited_without_env(paths):
+    assert session_budget_error(paths, {}) is None
+
+
+def test_session_budget_counts_attempts_since_session_start(paths):
+    env = {"LODESTAR_SESSION_START": "0", "LODESTAR_MAX_EVALS": "2"}
+    assert session_budget_error(paths, env) is None
+    run(paths, RAISES, name="a")
+    assert session_budget_error(paths, env) is None
+    run(paths, RAISES, name="b")
+    msg = session_budget_error(paths, env)
+    assert msg and "limit" in msg
+    # a new session starting after those two rows has a fresh budget
+    assert session_budget_error(paths, {**env, "LODESTAR_SESSION_START": "2"}) is None
